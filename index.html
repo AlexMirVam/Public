@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор гексаграмм</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f8ff;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            gap: 40px;
+        }
+
+        .hexagram {
+            display: flex;
+            flex-direction: column-reverse; /* Линии добавляются снизу вверх */
+            margin-bottom: 20px;
+        }
+
+        .line {
+            width: 200px;
+            height: 20px;
+            margin: 5px 0;
+            opacity: 0;
+            transform: scaleX(0);
+            animation: drawLine 0.5s forwards;
+        }
+
+        @keyframes drawLine {
+            to {
+                opacity: 1;
+                transform: scaleX(1);
+            }
+        }
+
+        .solid {
+            background-color: black;
+        }
+
+        .broken {
+            background: linear-gradient(to right, black 45%, white 45%, white 55%, black 55%);
+        }
+
+        .coin {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            background-color: #4caf50;
+            animation: none;
+        }
+
+        @keyframes flip {
+            0% { transform: rotateY(0); }
+            50% { transform: rotateY(180deg); }
+            100% { transform: rotateY(360deg); }
+        }
+
+        .coin.flip {
+            animation: flip 0.6s;
+        }
+
+        .coin.heads {
+            background-color: #4caf50; /* Орёл */
+        }
+
+        .coin.tails {
+            background-color: #f44336; /* Решка */
+        }
+
+        .name {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #00796b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #004d40;
+        }
+
+        .reset {
+            margin-top: 10px;
+            background-color: #d32f2f;
+        }
+
+        .reset:hover {
+            background-color: #b71c1c;
+        }
+
+        textarea {
+            width: 300px;
+            height: 100px;
+            margin-top: 20px;
+            margin-bottom: 10px; 
+            font-size: 16px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: none;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <div class="container">
+        <div>
+            <div class="hexagram" id="hexagram"></div>
+            <div class="name" id="hexagramName">Задайте вопрос</div>
+        </div>
+        <div>
+            <div class="coin" id="coin">?</div>
+        </div>
+    </div>
+    <textarea id="userInput" placeholder="Введите вопрос, который будет использоваться для формирования гексаграммы"></textarea>
+    <button id="generateButton">Бросить монету</button>
+    <button id="resetButton" class="reset">Сбросить</button>
+
+    <script>
+        const hexagram = document.getElementById('hexagram');
+        const generateButton = document.getElementById('generateButton');
+        const resetButton = document.getElementById('resetButton');
+        const coin = document.getElementById('coin');
+        const hexagramName = document.getElementById('hexagramName');
+        const userInput = document.getElementById('userInput');
+
+        const hexagramms_dict = {
+                                '111111': 'Гексаграмма 1 "Творчество"',
+                                '000000': 'Гексаграмма 2 "Исполнение"',
+                                '100010': 'Гексаграмма 3 "Начальная трудность"',
+                                '010001': 'Гексаграмма 4 "Недоразвитость"',
+                                '111010': 'Гексаграмма 5 "Необходимость ждать"',
+                                '010111': 'Гексаграмма 6 "Тяжба (Суд)"',
+                                '010000': 'Гексаграмма 7 "Войско"',
+                                '000010': 'Гексаграмма 8 "Приближение"',
+                                '111011': 'Гексаграмма 9 "Воспитание малым"',
+                                '110111': 'Гексаграмма 10 "Наступление"',
+                                '111000': 'Гексаграмма 11 "Расцвет"',
+                                '000111': 'Гексаграмма 12 "Упадок"',
+                                '101111': 'Гексаграмма 13 "Единомышленники"',
+                                '111101': 'Гексаграмма 14 "Обладание великим"',
+                                '001000': 'Гексаграмма 15 "Смирение"',
+                                '000100': 'Гексаграмма 16 "Вольность"',
+                                '100110': 'Гексаграмма 17 "Последование"',
+                                '011001': 'Гексаграмма 18 "Исправление порчи"',
+                                '110000': 'Гексаграмма 19 "Посещение"',
+                                '000011': 'Гексаграмма 20 "Созерцание"',
+                                '100101': 'Гексаграмма 21 "Стиснутые зубы"',
+                                '101001': 'Гексаграмма 22 "Убранство"',
+                                '000001': 'Гексаграмма 23 "Разрушение"',
+                                '100000': 'Гексаграмма 24 "Возврат"',
+                                '100111': 'Гексаграмма 25 "Беспорочность"',
+                                '111001': 'Гексаграмма 26 "Воспитание великим"',
+                                '100001': 'Гексаграмма 27 "Питание"',
+                                '011110': 'Гексаграмма 28 "Переразвитие великого"',
+                                '010010': 'Гексаграмма 29 "Повторная опасность"',
+                                '101101': 'Гексаграмма 30 "Сияние"',
+                                '001110': 'Гексаграмма 31 "Взаимодействие"',
+                                '011100': 'Гексаграмма 32 "Постоянство"',
+                                '001111': 'Гексаграмма 33 "Бегство"',
+                                '111100': 'Гексаграмма 34 "Мощь великого"',
+                                '000101': 'Гексаграмма 35 "Восход"',
+                                '101000': 'Гексаграмма 36 "Поражение света"',
+                                '101011': 'Гексаграмма 37 "Домашние"',
+                                '110101': 'Гексаграмма 38 "Разлад"',
+                                '001010': 'Гексаграмма 39 "Препятствие"',
+                                '010100': 'Гексаграмма 40 "Разрешение"',
+                                '110001':' Гексаограмма 41: "Убыль"',
+                                '100011':' Гексаограмма 42: "Приумножение"',
+                                '111110':' Гексаограмма 43: "Выход"',
+                                '011111':' Гексаограмма 44: "Перечение"',
+                                '000110':' Гексаограмма 45: "Воссоединение"',
+                                '011000':' Гексаограмма 46: "Подъем"',
+                                '010110':' Гексаограмма 47: "Истощение"',
+                                '011010':' Гексаограмма 48: "Колодец"',
+                                '101110':' Гексаограмма 49: "Смена"',
+                                '011101':' Гексаограмма 50: "Жертвенник"',
+                                '100100':' Гексаограмма 51: "Возбуждение"',
+                                '001001':' Гексаограмма 52: "Сосредоточенность"',
+                                '001011':' Гексаограмма 53: "Течение"',
+                                '110100':' Гексаограмма 54: "Невеста"',
+                                '101100':' Гексаограмма 55: "Изобилие"',
+                                '001101':' Гексаограмма 56: "Странствие"',
+                                '011011':' Гексаограмма 57: "Проникновение"',
+                                '110110':' Гексаограмма 58: "Радость"',
+                                '010011':' Гексаограмма 59: "Раздробление"',
+                                '110010':' Гексаограмма 60: "Ограничение"',
+                                '110011':' Гексаограмма 61: "Внутренняя правда"',
+                                '001100':' Гексаограмма 62: "Переразвитие малого"',
+                                '101010':' Гексаограмма 63: "Уже конец"',
+                                '010101':' Гексаограмма 64: "Еще не конец"'
+                            };
+
+
+
+        let lines = [];
+
+        generateButton.addEventListener('click', () => {
+            if (hexagram.children.length < 6) {
+                document.getElementById('userInput').disabled = true;
+              
+                coin.classList.add('flip');
+                setTimeout(() => {
+                    
+                    const isSolid = Math.random() < 0.5; 
+
+                    const coinValue = isSolid ? 1 : 0;
+                    coin.textContent = isSolid ? 'Орёл' : 'Решка';
+                    coin.className = `coin flip ${isSolid ? 'heads' : 'tails'}`;
+
+                    const currentUnixTime = Math.floor(Date.now() / 1000);
+                    const userInputLength = userInput.value.length
+                    const totalSum = coinValue + userInputLength + currentUnixTime;
+                    const lineTypeClass = totalSum % 2 === 0 ? 'solid' : 'broken';
+
+                    
+                    const line = document.createElement('div');
+                    line.className = `line ${lineTypeClass}`;
+                    hexagram.appendChild(line);
+                    lines.push(coinValue);
+
+                    
+                    hexagramName.textContent = ''; 
+
+                    
+                    coin.classList.remove('flip');
+                }, 600); 
+            } if (hexagram.children.length == 5){
+                setTimeout(() => {
+                hexagramName.textContent = hexagramms_dict[lines.join('')];
+                
+                generateButton.textContent = 'Отправить';
+                }, 600);
+
+            } if  (generateButton.textContent == 'Отправить'){
+                //Скрипт, который отправляет данные в тг
+                let tg = window.Telegram.WebApp;
+                let data = {
+                userText: userInput.value,
+                hexagramName: hexagramName.textContent,
+                lineValues: lines
+                };
+
+                tg.sendData(JSON.stringify(data));
+                tg.close();
+
+                
+            }
+
+            
+        });
+
+        resetButton.addEventListener('click', () => {
+            document.getElementById('userInput').disabled = false;
+            generateButton.textContent = 'Бросить монету'
+            hexagram.innerHTML = '';
+            coin.textContent = '?';
+            coin.className = 'coin';
+            hexagramName.textContent = 'Задайте вопрос';
+            lines = [];
+            userInput.value = '';
+        });
+    </script>
+</body>
+</html>
