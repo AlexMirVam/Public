@@ -126,7 +126,27 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             resize: none;
+        
+    /* Защита от изменения размера */
+            min-height: 100px;
+            max-height: 30vh;
+            overflow-y: auto;
+        
+    /* Переопределение фокусировки */
+            outline: none;
+            border-color: #ccc;
+            box-shadow: none;
         }
+
+        /* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+    textarea {
+        width: 95%; /* Более широкое поле для мобильных */
+        height: 150px; /* Фиксированная высота */
+        font-size: 14px; /* Уменьшенный шрифт */
+    }
+}
+
     </style>
 </head>
 <body>
